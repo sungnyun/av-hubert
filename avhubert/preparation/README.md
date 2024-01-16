@@ -5,6 +5,7 @@ This folder contains scripts for data preparation for LRS3 and VoxCeleb2 dataset
 ## Installation
 To preprocess, you need some additional packages:
 ```
+pip install cmake  # if installing dlib causes error    
 pip install -r requirements.txt
 ```
 
@@ -13,6 +14,7 @@ pip install -r requirements.txt
 Download and decompress the [data](https://www.robots.ox.ac.uk/~vgg/data/lip_reading/lrs3.html). Assume the data directory is `${lrs3}`, which contains three folders (`pretrain,trainval,test`). Follow the steps below:
 
 ### 1. Data preparation
+/path/to/ffmpeg = (which ffmpeg)
 ```sh
 python lrs3_prepare.py --lrs3 ${lrs3} --ffmpeg /path/to/ffmpeg --rank ${rank} --nshard ${nshard} --step ${step}
 ```
@@ -22,7 +24,7 @@ This will generate a list of file-ids (`${lrs3}/file.list`) and corresponding te
 ### 2. Detect facial landmark and crop mouth ROIs:
 ```sh
 python detect_landmark.py --root ${lrs3} --landmark ${lrs3}/landmark --manifest ${lrs3}/file.list \
- --cnn_detector /path/to/dlib_cnn_detector --face_detector /path/to/dlib_landmark_predictor --ffmpeg /path/to/ffmpeg \
+ --cnn_detector /path/to/dlib_cnn_detector --face_predictor /path/to/dlib_landmark_predictor --ffmpeg /path/to/ffmpeg \
  --rank ${rank} --nshard ${nshard}
 ```
 ```sh
@@ -31,7 +33,7 @@ python align_mouth.py --video-direc ${lrs3} --landmark ${landmark_dir} --filenam
  --rank ${rank} --nshard ${nshard}
 ```
 
-This generates mouth ROIs in `${lrs3}/video`. It shards all videos in `${lrs3}/file.list` into `${nshard}` and generate mouth ROI for `${rank}`-th shard , where rank is an integer in `[0,nshard-1]`. The face detection and landmark prediction are done using [dlib](https://github.com/davisking/dlib). The links to download `cnn_detector`, `face_detector`, `mean_face` can be found in the help message
+This generates mouth ROIs in `${lrs3}/video`. It shards all videos in `${lrs3}/file.list` into `${nshard}` and generate mouth ROI for `${rank}`-th shard , where rank is an integer in `[0,nshard-1]`. The face detection and landmark prediction are done using [dlib](https://github.com/davisking/dlib). The links to download `cnn_detector`, `face_predictor`, `mean_face` can be found in the help message
 
 ### 3. Count number of frames per clip
 ```sh
@@ -73,7 +75,7 @@ This will generate a list of file-ids (`${vox}/file.list`, by step 1) and extrac
 ### 2. Detect facial landmark and crop mouth ROIs:
 ```sh
 python detect_landmark.py --root ${vox} --landmark ${vox}/landmark --manifest ${vox}/file.list \
- --cnn_detector /path/to/dlib_cnn_detector --face_detector /path/to/dlib_landmark_predictor --ffmpeg /path/to/ffmpeg \
+ --cnn_detector /path/to/dlib_cnn_detector --face_predictor /path/to/dlib_landmark_predictor --ffmpeg /path/to/ffmpeg \
  --rank ${rank} --nshard ${nshard}
 ```
 ```sh
