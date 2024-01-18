@@ -104,7 +104,7 @@ def count_frames(wav_fns, rank, nshard):
     for wav_fn in tqdm(wav_fns):
         sample_rate, wav_data = wavfile.read(wav_fn)
         nfs.append(len(wav_data))
-    return wav_fns, nfs
+    return nfs
 
 
 if __name__ == '__main__':
@@ -112,24 +112,31 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='MUSAN audio preparation', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--musan', type=str, help='MUSAN root')
     parser.add_argument('--nshard', type=int, default=1, help='number of shards')
-    parser.add_argument('--rank', type=int, default=0, help='rank id')
+    parser.add_argument('--slurm_partition', type=str, default='cpu', help='slurm partition')
     args = parser.parse_args()
-
     tmp_dir = tempfile.mkdtemp(dir='./')
+    executor = submitit.AutoExecutor(folder=tmp_dir)
+    executor.update_parameters(slurm_array_parallelism=100, slurm_partition=args.slurm_partition, timeout_min=240)
     ranks = list(range(0, args.nshard))
     print(f"Split raw audio")
-    split_musan(args.musan, args.rank, args.nshard)
+    jobs = executor.map_array(split_musan, [args.musan for _ in ranks], ranks, [args.nshard for _ in ranks])
+    [job.result() for job in jobs]
     short_musan = os.path.join(args.musan, 'short-musan')
     print(f"Get speaker info")
     get_speaker_info(short_musan)
     print(f"Mix audio")
-    make_musan_babble(short_musan, args.rank, args.nshard)
+    jobs = executor.map_array(make_musan_babble, [short_musan for _ in ranks], ranks, [args.nshard for _ in ranks])
+    [job.result() for job in jobs]
     print(f"Count number of frames")
     wav_fns = glob.glob(f"{short_musan}/babble/*/*wav") + glob.glob(f"{short_musan}/music/*/*wav") + glob.glob(f"{short_musan}/noise/*/*wav")
-    wav_fns, nfs = count_frames(wav_fns, args.rank, args.nshard)
-    assert len(nfs) == len(wav_fns)
+    jobs = executor.map_array(count_frames, [wav_fns for _ in ranks], ranks, [args.nshard for _ in ranks])
+    nfs = [job.result() for job in jobs]
+    nfs_ = []
+    for nf in nfs:
+        nfs_.extend(nf)
+    nfs = nfs_
     num_frames_fn = f"{short_musan}/nframes.audio"
-    with open(num_frames_fn, 'a+') as fo:
+    with open(num_frames_fn, 'w') as fo:
         for wav_fn, nf in zip(wav_fns, nfs):
             fo.write(os.path.abspath(wav_fn)+'\t'+str(nf)+'\n')
     shutil.rmtree(tmp_dir)

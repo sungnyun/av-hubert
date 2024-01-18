@@ -117,10 +117,14 @@ If you want to test your model under noisy setting, you should prepare audio noi
 
 ### 1. MUSAN data preparation
 ```sh
-python musan_prepare.py --musan ${musan} --nshard ${nshard}  --slurm_partition ${slurm_partition}
+python musan_prepare_slurm.py --musan ${musan} --nshard ${nshard}  --slurm_partition ${slurm_partition}
 ```
-This will: (1) split raw audios into 10-second clips, (2) generate babble noise from MUSAN speech audio, (3) count number of frames per clip. The whole data will be sharded into `${nshard}` parts and each job processes one part. It runs on Slurm and has dependency on [submitit](https://github.com/facebookincubator/submitit)
+This will: (1) split raw audios into 10-second clips, (2) generate babble noise from MUSAN speech audio, (3) count number of frames per clip. The whole data will be sharded into `${nshard}` parts and each job processes one part. It runs on Slurm and has dependency on [submitit](https://github.com/facebookincubator/submitit),
 
+or
+```sh
+python musan_prepare.py --musan ${musan} --rank ${rank} --nshard ${nshard}
+```
 
 ### 2. LRS3 audio noise preparation
 ```sh
